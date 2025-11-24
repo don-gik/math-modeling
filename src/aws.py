@@ -1,29 +1,23 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-import numpy as np
+import json
+import logging
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score
 
-import json
 
 def main():
-    plt.rcParams['font.family'] = 'Malgun Gothic'
-    plt.rcParams['axes.unicode_minus'] = False
-
+    plt.rcParams["font.family"] = "Malgun Gothic"
+    plt.rcParams["axes.unicode_minus"] = False
 
     def sine_func(x, A, B, C, D):
         return A * np.sin(B * x + C) + D
 
+    data = ["일시", "일강수량(mm)"]
 
-    data = [
-        "일시",
-        "일강수량(mm)"
-    ]
-
-    var_dict = {
-        "일강수량(mm)" : "precipitation"
-    }
+    var_dict = {"일강수량(mm)": "precipitation"}
 
     df = pd.read_csv(
         "SURFACE_AWS_678_DAY_2019_2019_2025.csv",
@@ -34,13 +28,10 @@ def main():
     df["date"] = pd.to_datetime(df["일시"])
     df = df.set_index("date")
 
-    numeric_cols = [
-        "일강수량(mm)"
-    ]
+    numeric_cols = ["일강수량(mm)"]
 
     window_size = 120
     par: dict[str, dict[str, float]] = {}
-
 
     for var in numeric_cols:
         s = pd.to_numeric(df[var], errors="coerce").fillna(0)
@@ -48,21 +39,19 @@ def main():
         s = s.interpolate(method="time", limit_direction="both")
 
         if s.notna().sum() < window_size + 4:
-            print(f"{var}: not enough data after interpolation, skipping.")
+            logging.error(f"{var}: not enough data after interpolation, skipping.")
             continue
 
         rolling = s.rolling(window=window_size, min_periods=window_size // 2).mean()
 
         rolling_valid = rolling.dropna()
         if len(rolling_valid) < 4:
-            print(f"{var}: not enough valid rolling values, skipping.")
+            logging.error(f"{var}: not enough valid rolling values, skipping.")
             continue
-
 
         idx = rolling_valid.index
         x_data = np.arange(len(idx), dtype=float)
         y_data = rolling_valid.to_numpy()
-
 
         A0 = (y_data.max() - y_data.min()) / 2.0
         D0 = y_data.mean()
@@ -72,9 +61,9 @@ def main():
         initial_guess = [A0, B0, C0, D0]
 
         B_min = 2.0 * np.pi / (365.0 * 10.0)  # 10년
-        B_max = 2.0 * np.pi / 10.0            # 10일
-        lower_bounds = [0.0, B_min, -2.0 * np.pi, y_data.min() - abs(A0)*2]
-        upper_bounds = [np.inf, B_max,  2.0 * np.pi, y_data.max() + abs(A0)*2]
+        B_max = 2.0 * np.pi / 10.0  # 10일
+        lower_bounds = [0.0, B_min, -2.0 * np.pi, y_data.min() - abs(A0) * 2]
+        upper_bounds = [np.inf, B_max, 2.0 * np.pi, y_data.max() + abs(A0) * 2]
 
         initial_guess = [A0, B0, C0, D0]
 
@@ -88,9 +77,14 @@ def main():
                 maxfev=20000,
             )
 
-            par[var_dict[var]] = {"A" : params[0], "B" : params[1], "C" : params[2], "D" : params[3]}
+            par[var_dict[var]] = {
+                "A": params[0],
+                "B": params[1],
+                "C": params[2],
+                "D": params[3],
+            }
         except RuntimeError:
-            print(f"{var}: curve_fit failed.")
+            logging.error(f"{var}: curve_fit failed.")
             continue
 
         y_fit = sine_func(x_data, *params)
@@ -111,7 +105,6 @@ def main():
         plt.grid(True)
         plt.tight_layout()
         plt.show()
-
 
     with open("aws.json", "w") as json_file:
         json.dump(par, json_file, indent=4)
