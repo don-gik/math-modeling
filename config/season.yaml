@@ -2,5 +2,5 @@ defaults:
   - simulate: model-season
 
 args:
-  data_process: "aws"
-  simulate: false
+  data_process: ""
+  simulate: true

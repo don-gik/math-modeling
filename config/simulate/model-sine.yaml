@@ -1,0 +1,15 @@
+jsons:
+  - "data/asos-sine-large-evaporation.json"
+  - "data/aws-sine-precipitation.json"
+
+args:
+  start_date: "2024-01-01"
+  end_date: "2024-12-31"
+
+  precipitation: 1
+  large_evaporation: 0
+
+  start_capacity: 80
+
+model:
+  type: "SineModel"

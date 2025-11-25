@@ -1,0 +1,6 @@
+defaults:
+  - simulate: model-sine
+
+args:
+  data_process: ""
+  simulate: true
