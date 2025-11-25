@@ -14,16 +14,14 @@ def main():
     plt.rcParams["axes.unicode_minus"] = False
 
     os.makedirs("plots/", exist_ok=True)
-
-    def sine_func(x, A, B, C, D):
-        return A * np.sin(B * x + C) + D
+    os.makedirs("data/processed", exist_ok=True)
 
     data = ["일시", "일강수량(mm)"]
 
     var_dict = {"일강수량(mm)": "precipitation"}
 
     df = pd.read_csv(
-        "data/SURFACE_AWS_678_DAY_2019_2019_2025.csv",
+        "data/raw/SURFACE_AWS_678_DAY_2019_2019_2025.csv",
         encoding="utf-8",
         usecols=data,
     )
@@ -66,16 +64,18 @@ def main():
 
         B0 = 2 * np.pi / 365.0
         C0 = 0.0
-        initial_guess = [A0, B0, C0, D0]
 
         B_min = 2.0 * np.pi / (365.0 * 10.0)
         B_max = 2.0 * np.pi / 10.0
-        lower_bounds = [0.0, B_min, -2.0 * np.pi, y_data.min() - abs(A0) * 2]
-        upper_bounds = [np.inf, B_max, 2.0 * np.pi, y_data.max() + abs(A0) * 2]
+        lower_bounds = [0.0, B_min, -2.0 * np.pi]
+        upper_bounds = [np.inf, B_max, 2.0 * np.pi]
 
-        initial_guess = [A0, B0, C0, D0]
+        initial_guess = [A0, B0, C0]
 
         try:
+            def sine_func(x, A, B, C):
+                s = np.sin(B * x + C)
+                return A * s + D0
             params, params_covariance = curve_fit(
                 sine_func,
                 x_data,
@@ -89,7 +89,7 @@ def main():
                 "A": params[0],
                 "B": params[1],
                 "C": params[2],
-                "D": params[3],
+                "D": D0,
             }
         except RuntimeError:
             logger.error(f"{var}: curve_fit failed.")
@@ -151,10 +151,22 @@ def main():
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"plots/aws-{var_dict[var]}")
+        plt.savefig(f"plots/aws-{var_dict[var]}-season")
 
-        with open(f"data/aws-season-{var_dict[var]}.json", "w") as json_file:
+        plt.figure(figsize=(10, 6))
+        plt.plot(x_time, y_data, label=f"{var} ({window_size}일 이동 평균)", linewidth=2)
+        plt.plot(x_time, y_fit, label=f"사인 곡선 피팅 R^2={r2:.3f}", linewidth=2)
+
+        plt.title(f"{window_size}일 이동 평균 - {var}")
+        plt.xlabel("날짜")
+        plt.ylabel(f"{var} 값")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"plots/aws-{var_dict[var]}-sine")
+
+        with open(f"data/processed/aws-season-{var_dict[var]}.json", "w") as json_file:
             json.dump(seasonal_avg.to_dict(), json_file, indent=4)
 
-        with open(f"data/aws-sine-{var_dict[var]}.json", "w") as json_file:
+        with open(f"data/processed/aws-sine-{var_dict[var]}.json", "w") as json_file:
             json.dump(par, json_file, indent=4)

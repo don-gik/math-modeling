@@ -1,6 +1,6 @@
 jsons:
-  - "data/asos-season-large-evaporation.json"
-  - "data/aws-season-precipitation.json"
+  - "data/processed/asos-season-large-evaporation.json"
+  - "data/processed/aws-season-precipitation.json"
 
 args:
   start_date: "2024-01-01"
@@ -10,6 +10,10 @@ args:
   large_evaporation: 0
 
   start_capacity: 80
+
+  data: "data/raw/한국농어촌공사_전국 저수지 일별 저수율_20241231.csv"
+  name: "오봉"
+  loc: "강원특별자치도 강릉시"
 
 model:
   type: "SeasonModel"

@@ -12,17 +12,16 @@ from src.simulate import Simulator
 
 @hydra.main(config_path="config", version_base=None)
 def main(config):
-    logging.config.fileConfig("logging.conf")
+    logging.config.fileConfig("logging.conf", encoding="utf-8")
     logger = logging.getLogger(__name__)
 
     logger.info("Starting Program...")
-    logger.info(f"Using option : {config}")
 
     if config.args.data_process == "aws":
         aws_main()
     if config.args.data_process == "asos":
         asos_main()
-    if config.args.simulate:
+    if config.args.simulate == True:
         simulator = Simulator(config.simulate)
         simulator.run()
 

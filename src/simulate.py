@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
+from typing import cast
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
 import src.models as models
@@ -55,6 +56,53 @@ class Simulator:
 
         plt.savefig(f"plots/prediction/{title}")
 
+    @staticmethod
+    def _plot_both(start_date: datetime, end_date: datetime, result: list[float], title: str, model_name: str, data_path: str, data_name: str, data_loc: str):
+        plt.rcParams["font.family"] = "Malgun Gothic"
+        plt.rcParams["axes.unicode_minus"] = False
+
+        x_data = pandas.date_range(
+            start=start_date,
+            end=end_date + timedelta(days=1),
+        )
+        y_data = np.array(result)
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(x_data, y_data, label="저수량 예측", linewidth=2)
+
+        df = pandas.read_csv(
+            data_path,
+            encoding="EUC-KR",
+        )
+        df.columns = df.columns.str.strip()
+        df_idx = df.set_index(["저수지명", "위치"]).sort_index()
+
+        cols = [c for c in df_idx.columns if c != "유효저수량(천m3)"]
+        row = df_idx.loc[(data_name, data_loc), cols]
+
+        if isinstance(row, pandas.DataFrame):
+            row = row.iloc[0]
+
+        date_index = pandas.to_datetime(row.index, errors="coerce")
+        mask = date_index.notna()
+
+        s = pandas.to_numeric(row[mask], errors="coerce")
+        s.index = date_index[mask]
+        s.index.name = "date"
+
+        s.plot(label="실제 계절 저수량", linewidth=2)
+
+        plt.title(f"계절 저수량 예측 - {model_name}")
+        plt.xlabel("날짜")
+        plt.ylabel("저수량")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+
+        os.makedirs("plots/prediction/", exist_ok=True)
+
+        plt.savefig(f"plots/prediction/{title}_both")
+
     def run(self):
         logger = logging.getLogger(__name__)
 
@@ -80,4 +128,9 @@ class Simulator:
 
         logger.info("Plotting...")
 
+        data_path = getattr(self.args, "data")
+        data_name = getattr(self.args, "name")
+        data_loc = getattr(self.args, "loc")
+
         self._plot(start_date=start_date, end_date=end_date, result=result, title=title, model_name=getattr(self.model_config, "type"))
+        self._plot_both(start_date=start_date, end_date=end_date, result=result, title=title, model_name=getattr(self.model_config, "type"), data_path=data_path, data_name=data_name, data_loc=data_loc)
