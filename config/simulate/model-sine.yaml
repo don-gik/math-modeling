@@ -1,6 +1,7 @@
 jsons:
   - "data/processed/asos-sine-large-evaporation.json"
   - "data/processed/aws-sine-precipitation.json"
+  - "data/processed/water_use.json"
 
 args:
   start_date: "2024-01-01"
@@ -8,12 +9,15 @@ args:
 
   precipitation: 1
   large_evaporation: 0
+  water_usage: 2
 
-  start_capacity: 80
+  start_capacity: 91.6
 
   data: "data/raw/한국농어촌공사_전국 저수지 일별 저수율_20241231.csv"
   name: "오봉"
   loc: "강원특별자치도 강릉시"
+
+  water_use: "data/raw/수모델_월별물사용량_UTF-8.csv"
 
 model:
   type: "SineModel"

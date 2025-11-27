@@ -113,6 +113,7 @@ class Simulator:
             json_paths=OmegaConf.to_container(self.jsons),
             precipitation=getattr(self.args, "precipitation"),
             large_evaporation=getattr(self.args, "large_evaporation"),
+            water_usage=getattr(self.args, "water_usage")
         )
 
         start_date = datetime.strptime(getattr(self.args, "start_date"), "%Y-%m-%d")
@@ -134,3 +135,5 @@ class Simulator:
 
         self._plot(start_date=start_date, end_date=end_date, result=result, title=title, model_name=getattr(self.model_config, "type"))
         self._plot_both(start_date=start_date, end_date=end_date, result=result, title=title, model_name=getattr(self.model_config, "type"), data_path=data_path, data_name=data_name, data_loc=data_loc)
+
+        logger.info("Ignore incompatible converter warnings. It is a pandas plotting warning.")

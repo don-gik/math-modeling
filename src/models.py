@@ -20,6 +20,7 @@ class BaseModel(ABC):
         json_paths: list[str],
         precipitation: int,
         large_evaporation: int,
+        water_usage: int,
         external_supply: float | None = None,
         water_policy: float | None = None,
     ): ...
@@ -37,6 +38,7 @@ class SeasonModel(BaseModel):
         json_paths: list[str],
         precipitation: int,
         large_evaporation: int,
+        water_usage: int,
         external_supply: float | None = None,
         water_policy: float | None = None,
     ):
@@ -47,6 +49,7 @@ class SeasonModel(BaseModel):
 
         self.precipitation_index = precipitation
         self.large_evaporation_index = large_evaporation
+        self.water_usage_index = water_usage
         self.external_supply = external_supply
         self.water_policy = water_policy
 
@@ -70,12 +73,21 @@ class SeasonModel(BaseModel):
         o: float = 0.0 if self.external_supply is None else self.external_supply
         p: float = 0.0 if self.water_policy is None else self.water_policy
 
-        return (r, v, d, o, p)
+        date_first = datetime.datetime(date.year, date.month, 1)
+        if date.month == 12:
+            date_last = datetime.datetime(date.year + 1, 1, 1)
+        else:
+            date_last = datetime.datetime(date.year, date.month + 1, 1)
+        date_delta = date_last - date_first - datetime.timedelta(days=1)
+
+        w: float = float(str(self.json[self.water_usage_index][str(date.month - 1)]).replace(",", "")) / date_delta.days
+
+        return (r, v, d, o, p, w)
 
     def _next(self, current_capacity: float, date: datetime.date):
-        r, v, d, o, p = self._get(date)
+        r, v, d, o, p, w = self._get(date)
 
-        next_capacity = current_capacity + 0.01848 * (r - v) * d + 0.07 * o - (1 - p) * 0.0055 * d
+        next_capacity = current_capacity + 0.01848 * (r - v) * d + 0.07 * o - (1 - p) * 0.0055 * d - w / 14450000.0
 
         return next_capacity
 
@@ -99,6 +111,7 @@ class SineModel(BaseModel):
         json_paths: list[str],
         precipitation: int,
         large_evaporation: int,
+        water_usage: int,
         external_supply: float | None = None,
         water_policy: float | None = None,
     ):
@@ -109,6 +122,7 @@ class SineModel(BaseModel):
 
         self.precipitation_index = precipitation
         self.large_evaporation_index = large_evaporation
+        self.water_usage_index = water_usage
         self.external_supply = external_supply
         self.water_policy = water_policy
 
@@ -135,12 +149,21 @@ class SineModel(BaseModel):
         o: float = 0.0 if self.external_supply is None else self.external_supply
         p: float = 0.0 if self.water_policy is None else self.water_policy
 
-        return (r, v, d, o, p)
+        date_first = datetime.datetime(date.year, date.month, 1)
+        if date.month == 12:
+            date_last = datetime.datetime(date.year + 1, 1, 1)
+        else:
+            date_last = datetime.datetime(date.year, date.month + 1, 1)
+        date_delta = date_last - date_first - datetime.timedelta(days=1)
+
+        w: float = float(str(self.json[self.water_usage_index][str(date.month - 1)]).replace(",", "")) / date_delta.days
+
+        return (r, v, d, o, p, w)
 
     def _next(self, current_capacity: float, date: datetime.date):
-        r, v, d, o, p = self._get(date)
+        r, v, d, o, p, w = self._get(date)
 
-        next_capacity = current_capacity + 0.01848 * (r - v) * d + 0.07 * o - (1 - p) * 0.0055 * d
+        next_capacity = current_capacity + 0.01848 * (r - v) * d + 0.07 * o - (1 - p) * 0.0055 * d - w / 14450000.0
 
         return next_capacity
 

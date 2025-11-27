@@ -7,6 +7,7 @@ import hydra
 
 from src.asos import main as asos_main
 from src.aws import main as aws_main
+from src.water import main as water_main
 from src.simulate import Simulator
 
 
@@ -16,6 +17,10 @@ def main(config):
     logger = logging.getLogger(__name__)
 
     logger.info("Starting Program...")
+
+    logger.info("Precalculating water usage into json...")
+    water_main(config.simulate.args)
+    logger.info("Water usage saved into json file.")
 
     if config.args.data_process == "aws":
         aws_main()
