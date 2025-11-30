@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
-from scipy.optimize import minimize, least_squares, differential_evolution, dual_annealing
+from scipy.optimize import minimize, least_squares, differential_evolution, dual_annealing, minimize_scalar
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
 import src.models as models
@@ -142,7 +142,7 @@ class Simulator:
         q_low = np.quantile(y_true_arr[:n], 0.15)
         q_high = np.quantile(y_true_arr[:n], 0.85)
         extreme_mask = (y_true_arr[:n] <= q_low) | (y_true_arr[:n] >= q_high)
-        weights = 1.0 + 4.0 * extreme_mask.astype(float)
+        weights = 1.0 + 2.0 * extreme_mask.astype(float)
 
         residual = ((y_true_arr[:n] - y_pred[:n]) / scale) * weights
 
@@ -164,6 +164,8 @@ class Simulator:
         model_class = getattr(models, model_type)
         param_names = getattr(model_class, "PARAM_NAMES", None)
         param_dim = getattr(model_class, "PARAM_DIM", len(param_names) if param_names is not None else 6)
+        if param_dim <= 0:
+            raise ValueError(f"{model_type} must define a positive PARAM_DIM (got {param_dim}).")
 
         P_MAX_fallback = [2.0, 1e6, 1e6, 1e6, 1e6, 1e6]
         P_MAX_raw = getattr(model_class, "P_MAX", P_MAX_fallback if param_dim <= len(P_MAX_fallback) else [1.0] * param_dim)
@@ -182,9 +184,6 @@ class Simulator:
         def residual_scaled(u, model_type, jsons, args, y_true, start_date, end_date):
             x = u * P_MAX
             return self.loss_for_P(x, model_type, jsons, args, y_true, start_date, end_date)
-        
-        def residual_scaled_wrapped(u):
-            return residual_scaled(u, *common_args)
 
         def scalar_objective(theta, model_type, jsons, args, y_true, start_date, end_date):
             res = residual_scaled(theta, model_type, jsons, args, y_true, start_date, end_date)
@@ -195,24 +194,42 @@ class Simulator:
                 np.array(theta),
                 model_type, self.jsons, self.args, y_true, start_date, end_date,
             )
-
-        bounds_u = (np.zeros(param_dim), np.ones(param_dim))
-        lb = np.zeros(param_dim)
-        ub = np.ones(param_dim)
-        bounds_de = list(zip(lb, ub))
         
-        x0 = np.array([0.5] * param_dim)
+        x0 = [0.5] * param_dim
         sigma0 = 0.2
-
-        es = cma.CMAEvolutionStrategy(x0, sigma0, {
-            "bounds": [0.0, 1.0],
+        lb_cma = [0.0] * param_dim
+        ub_cma = [1.0] * param_dim
+        cma_opts = {
+            "bounds": [lb_cma, ub_cma],
+            "CMA_stds": [sigma0] * param_dim,
+            "scaling_of_variables": [1.0] * param_dim,
+            "typical_x": [0.0] * param_dim,
+            "fixed_variables": None,
+            "transformation": None,
             "maxiter": 2000,
-        })
+        }
 
-        es.optimize(scalar_objective_cma)
-        theta_cma = np.array(es.result.xbest)
+        if param_dim == 1:
+            def objective_scalar(u):
+                u_clipped = float(np.clip(u, 0.0, 1.0))
+                return scalar_objective(
+                    np.array([u_clipped]),
+                    model_type, self.jsons, self.args, y_true, start_date, end_date,
+                )
 
-        x_opt = P_MAX * theta_cma
+            res_scalar = minimize_scalar(
+                objective_scalar,
+                bounds=(0.0, 1.0),
+                method="bounded",
+                options={"xatol": 1e-3, "maxiter": 2000},
+            )
+            theta_best = np.array([float(np.clip(res_scalar.x, 0.0, 1.0))])
+        else:
+            es = cma.CMAEvolutionStrategy(x0, sigma0, cma_opts)
+            es.optimize(scalar_objective_cma)
+            theta_best = np.array(es.result.xbest)
+
+        x_opt = P_MAX * theta_best
 
         model: models.BaseModel = getattr(models, model_type)(
             json_paths=OmegaConf.to_container(self.jsons),

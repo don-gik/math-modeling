@@ -1,0 +1,8 @@
+defaults:
+  - _self_
+  - predict: model-simple
+
+args:
+  data_process: ""
+  simulate: false
+  predict: true

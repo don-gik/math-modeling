@@ -1,0 +1,23 @@
+jsons:
+  - "data/processed/asos-season-large-evaporation.json"
+  - "data/processed/aws-season-precipitation.json"
+  - "data/processed/water_use.json"
+
+args:
+  start_date: "2019-01-01"
+  end_date: "2024-12-31"
+
+  precipitation: 1
+  large_evaporation: 0
+  water_usage: 2
+
+  start_capacity: 81.3
+
+  data: "data/raw/2015_2025_저수율_현황.csv"
+  name: "오봉"
+  loc: "강원특별자치도 강릉시"
+
+  water_use: "data/raw/수모델_월별물사용량.csv"
+
+model:
+  type: "LessModel"

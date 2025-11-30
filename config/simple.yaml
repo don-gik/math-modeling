@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - simulate: model-season
+  - simulate: model-simple
 
 args:
   data_process: ""
