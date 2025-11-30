@@ -1,0 +1,1 @@
+uv run main.py --config-name predict-season.yaml

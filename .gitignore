@@ -19,9 +19,5 @@ outputs/*
 # Markdown notes
 *.md
 
-# Ignore data
-*.json
-*.png
-
 # Outcmaes
 outcmaes/*
