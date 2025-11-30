@@ -1,7 +1,9 @@
 defaults:
   - _self_
   - simulate: model-sine
+  - predict: model-sine
 
 args:
   data_process: ""
   simulate: true
+  predict: false

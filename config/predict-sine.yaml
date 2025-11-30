@@ -1,0 +1,8 @@
+defaults:
+  - _self_
+  - predict: model-sine
+
+args:
+  data_process: ""
+  simulate: false
+  predict: true

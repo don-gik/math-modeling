@@ -1,0 +1,8 @@
+defaults:
+  - _self_
+  - predict: model-season
+
+args:
+  data_process: ""
+  simulate: false
+  predict: true

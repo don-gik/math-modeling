@@ -136,6 +136,8 @@ def main():
 
         df["season"] = df.index.month.map(get_season)
         seasonal_avg = df.groupby("season")[var].mean().reindex(["spring", "summer", "fall", "winter"])
+        seasonal_by_year = df.groupby([df.index.year, "season"])[var].mean().unstack()
+        monthly_avg = df.groupby(df.index.month)[var].mean()
 
         season_to_md = {
             "winter": (1, 15),
@@ -147,25 +149,37 @@ def main():
         season_order = ["spring", "summer", "fall", "winter"]
         years = sorted(df.index.year.unique())
 
-        x_list = []
-        y_list = []
-
-        for year in years:
-            for season in season_order:
-                if pd.isna(seasonal_avg.loc[season]):
-                    continue
-                month, day = season_to_md[season]
-                x_list.append(pd.Timestamp(year=year, month=month, day=day))
-                y_list.append(seasonal_avg.loc[season])
-
-        x_bar = pd.to_datetime(x_list)
-        y_bar = np.array(y_list, dtype=float)
+        monthly_payload: dict[str, float] = {str(k): float(v) for k, v in monthly_avg.items()}
 
         plt.figure(figsize=(10, 6))
         plt.plot(x_time, y_data, label=f"{var} ({window_size}일 이동 평균)", linewidth=2)
         # plt.plot(x_time, y_fit, label=f"사인 곡선 피팅 R^2={r2:.3f}", linewidth=2)
 
-        plt.bar(x_bar, y_bar, color=["green"], width=60, alpha=0.3)
+        x_time = rolling_valid.index
+        start_year = x_time.min().year
+        end_year   = x_time.max().year
+
+        months = [int(m) for m in monthly_avg.index]
+        base_height = monthly_avg.to_numpy(dtype=float)
+
+        xs: list[pd.Timestamp] = []
+        hs: list[float] = []
+
+        for year in range(start_year, end_year + 1):
+            xs.extend(pd.Timestamp(year=year, month=m, day=15) for m in months)
+            hs.extend(base_height)
+
+        x = xs
+        height = np.array(hs, dtype=float)
+
+        plt.bar(
+            x,  # type: ignore
+            height,
+            color=["green"],
+            width=20,
+            alpha=0.3,
+            label="월별 평균",
+        )
 
         plt.title(f"{window_size}일 이동 평균 - {var}")
         plt.xlabel("날짜")
@@ -173,7 +187,7 @@ def main():
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"plots/asos-{var_dict[var]}-season")
+        plt.savefig(f"plots/asos-{var_dict[var]}-monthly")
 
         plt.figure(figsize=(10, 6))
         plt.plot(x_time, y_data, label=f"{var} ({window_size}일 이동 평균)", linewidth=2)
@@ -188,7 +202,8 @@ def main():
         plt.savefig(f"plots/asos-{var_dict[var]}-sine")
 
         with open(f"data/processed/asos-season-{var_dict[var]}.json", "w") as json_file:
-            json.dump(seasonal_avg.to_dict(), json_file, indent=4)
+            json.dump(monthly_payload, json_file, indent=4)
 
+        par.update(monthly_payload)
         with open(f"data/processed/asos-sine-{var_dict[var]}.json", "w") as json_file:
             json.dump(par, json_file, indent=4)

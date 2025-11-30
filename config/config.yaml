@@ -1,7 +1,9 @@
 defaults:
   - _self_
   - simulate: model-season
+  - predict: model-season
 
 args:
   data_process: "aws"
   simulate: false
+  predict: false
