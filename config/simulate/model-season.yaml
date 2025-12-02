@@ -17,7 +17,7 @@ args:
   name: "오봉"
   loc: "강원특별자치도 강릉시"
 
-  water_use: "data/raw/수모델_월별물사용량.csv"
+  water_use: "data/raw/월별물사용량.csv"
 
 model:
   type: "SeasonModel"
