@@ -21,3 +21,7 @@ outputs/*
 
 # Outcmaes
 outcmaes/*
+
+# Other stuffs
+dump.py
+*.txt

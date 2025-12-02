@@ -19,7 +19,7 @@ args:
   loc: "강원특별자치도 강릉시"
 
   water_use: "data/raw/수모델_월별물사용량.csv"
-  proportion_path: "data/processed/SeasonModel_proportion.json"
+  proportion_path: "data/processed/LessModel_proportion.json"
 
   scenarios:
     - name: "평년 강수량 유지"
